@@ -1,6 +1,6 @@
 {
     "name": "Gmail Mouse Gestures",
-    "version": "0.9.4",
+    "version": "0.9.5",
     "manifest_version": 2,
     "description": "Use mouse gestures to browse mails even faster!",
     "content_scripts": [
@@ -16,7 +16,6 @@
     "web_accessible_resources": [
         "images/gestures.png",
         "images/icons/icon-64x64.png",
-        "notifications/updated.html",
         "content-script.css",
         "manifest.json"
     ],

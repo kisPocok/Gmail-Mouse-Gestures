@@ -1,8 +1,8 @@
 
 /**
  * Gmail Mouse Gestures (Chrome extension)
- * 
- * Any advice and comments are welcome! 
+ *
+ * Any advice and comments are welcome!
  * Usage: Press right mouse button then drag any direction
  * Follow me on twitter: @kisPocok
  *
@@ -58,11 +58,17 @@ var MouseGesture = (function(d, w) {
 
         // at this state DOM is ready
 
+        // initialize basic functions
         setWindowSize();
         setDeflections();
+
+        // Generate layout
+        removeLayout();
         createLayout();
+        resetLayout();
+
         loadManifest(function() {
-            createNotification();
+            prepareNotification()
         });
 
         // TODO kill this shit
@@ -86,27 +92,45 @@ var MouseGesture = (function(d, w) {
         xmlhttp.send(null);
     }
 
-    /**
-     * [createNotification description]
-     * @return {[type]} [description]
-     */
-    var createNotification = function()
+    var prepareNotification = function()
     {
-        //console.log('MANIFEST', manifest);
-        //console.log('VERSION', manifest.version);
-
         if (window.localStorage === null) {
             return false;
         }
 
-        var lastNotification = localStorage.getItem('MG.lastNotification'), // legutobbi ertesites datuma
-            version = localStorage.getItem('MG.version');
+        console.log('GM.Version', manifest.version);
+        console.log('GM.Manifest', manifest);
 
-        // Update
-        if (version !== manifest.version) {
-            var notification = webkitNotifications.createHTMLNotification(
-                chrome.extension.getURL('notifications/updated.html')
-            );
+        if (getNotificationContent() !== null) {
+            if (window.webkitNotifications.checkPermission() != 0) {
+                window.webkitNotifications.requestPermission(createNotification)
+            } else {
+                createNotification();
+            }
+        }
+    }
+
+    /**
+     * Notify user for something
+     */
+    var createNotification = function()
+    {
+        if (window.webkitNotifications.checkPermission() != 0) {
+            console.log('Oops! You didn\'t allow notifications.');
+        } else {
+            var content = getNotificationContent(),
+                notification = window.webkitNotifications.createNotification(
+                    chrome.extension.getURL(content.icon),
+                    content.title,
+                    content.content
+                );
+            notification.onclick = function(e)
+            {
+                w.focus();
+                this.cancel();
+                event.stopPropagation();
+                w.open(content.url, 'mousegesture');
+            };
             notification.show();
             setTimeout(function(){ notification.cancel(); }, '15000');
             localStorage.setItem('MG.lastNotification', new Date().getTime());
@@ -114,7 +138,43 @@ var MouseGesture = (function(d, w) {
         }
     }
 
-    /** 
+    /**
+     * Get notify window's content
+     * @return null|object
+     */
+    var getNotificationContent = function()
+    {
+        if (localStorage.getItem('MG.lastNotification') === null) {
+            // Installed
+            return null;
+            /*
+            // TODO következő frissítésnél már be lehet tenni!
+            return {
+                'icon'   : '/images/icons/icon-64x64.png',
+                'title'  : 'Welcome to Mouse Gestures for Gmail',
+                'content': 'For more information, click here.',
+                'url'    : 'http://mousegestures.blog.hu/?installed'
+            };
+            */
+        } else if (localStorage.getItem('MG.version') !== manifest.version) {
+            // Update
+            return {
+                'icon'   : '/images/icons/icon-64x64.png',
+                'title'  : 'Mouse Gestures updated',
+                'content': 'Need help? Click here.',
+                'url'    : 'http://mousegestures.blog.hu/?updated'
+            };
+        } else {
+            return null;
+        }
+    }
+
+    var notify = function()
+    {
+
+    };
+
+    /**
      * Delete layout
      */
     var removeLayout = function()
@@ -132,8 +192,6 @@ var MouseGesture = (function(d, w) {
      */
     var createLayout = function()
     {
-        removeLayout();
-
         // append css rules
         var cssUrl = chrome.extension.getURL('content-script.css');
         var css = d.createElement('link');
@@ -161,8 +219,6 @@ var MouseGesture = (function(d, w) {
         elementRight = createSubDiv(div, 'right');
         d.body.appendChild(div);
         element = d.getElementById(elementId);
-
-        resetLayout();
     };
 
     /**
@@ -225,11 +281,11 @@ var MouseGesture = (function(d, w) {
         ) {
             top = Math.min(0.8, movementY/opacityMultiplier);
             bgPos = 'top center';
-           
+
         } else if (directionX == DIRECTION_LEFT) {
             left = Math.min(0.8, movementX/opacityMultiplier);
             bgPos = 'left -165px';
-           
+
         } else if (directionX == DIRECTION_RIGHT) {
             right = Math.min(0.8, movementX/opacityMultiplier*-1);
             bgPos = 'right -165px';
@@ -255,6 +311,12 @@ var MouseGesture = (function(d, w) {
      */
     var resetLayout = function()
     {
+        if (element == undefined) {
+            console.warn('Missing layout! Creating new one.');
+            // small bugfix, when layout didn't init
+            createLayout();
+        }
+
         if (imageMode == MODE_CSS) {
             elementTop.style.opacity = 0;
             elementLeft.style.opacity = 0;
@@ -280,7 +342,7 @@ var MouseGesture = (function(d, w) {
      * Compute diversion
      */
     var setDeflections = function()
-    {       
+    {
         deflectionY = Math.round(windowSize.y / 100 * minimalDeflection);
         deflectionX = Math.round(windowSize.x / 100 * minimalDeflection);
     };
@@ -337,12 +399,12 @@ var MouseGesture = (function(d, w) {
         var directionX = getDirection('x', movementX);
 
         // minimalis elmozdulas kell, ahhoz hogy mukodjon
-        isMouseMoved = directionX !== false || directionY !== false 
+        isMouseMoved = directionX !== false || directionY !== false
 
         // Trigger events for Gmail!
         if (isMouseMoved) {
             try {
-                if (Math.abs(movementX) < (movementY * 2) 
+                if (Math.abs(movementX) < (movementY * 2)
                     && directionY == DIRECTION_UP
                 ) {
                     Gmail.loadInbox();
@@ -460,7 +522,7 @@ var MouseGesture = (function(d, w) {
                 return;
             }
             */
-            
+
             // return to INBOX
             var inbox = d.getElementsByClassName('GLujEb')[0];
             if (!inbox) {
@@ -643,4 +705,4 @@ var MouseGesture = (function(d, w) {
         w.addEventListener('load', init, false);
     }
 
-}(window.top.document.getElementById('canvas_frame').contentDocument, window.top));
+}(window.top.document, window.top));
